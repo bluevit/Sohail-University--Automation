@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Teacher Evaluation Upload</title>
+
+  <!-- You can keep your existing CSS -->
+  <link rel="stylesheet" href="../static/style.css">
+
+  <style>
+    /* Minimal fallback styling if CSS fails */
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+    }
+    .container {
+      width: 400px;
+      margin: 80px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input, button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+    }
+    button {
+      background: #007bff;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    #backend-status {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: gray;
+      margin-right: 8px;
+    }
+    .dot.live { background: green; }
+    .dot.down { background: red; }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+  <h2>Upload Teacher Evaluation PDF</h2>
+
+  <!-- Backend status -->
+  <div id="backend-status">
+    <span class="dot"></span>
+    <span class="status-text">Checking backend...</span>
+  </div>
+
+  <input type="text" id="batchCode" placeholder="Batch Code (e.g. SPM-02-MSN-SU-2025)">
+  <input type="text" id="semester" placeholder="Semester (e.g. Semester II)">
+  <input type="text" id="session" placeholder="Session (e.g. FALL-2020)">
+
+  <input type="file" id="pdfInput" accept=".pdf">
+  <button onclick="uploadPDF()">Upload & Process</button>
+</div>
+
+<script>
+const BACKEND_URL = "http://127.0.0.1:5000";
+const uploadBtn = document.querySelector("button");
+
+/* -------------------------------
+   HEALTH CHECK
+-------------------------------- */
+function checkHealth() {
+  fetch(`${BACKEND_URL}/health`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === "live") {
+        document.querySelector(".dot").classList.add("live");
+        document.querySelector(".status-text").innerText = "Backend is LIVE";
+      }
+    })
+    .catch(() => {
+      document.querySelector(".dot").classList.add("down");
+      document.querySelector(".status-text").innerText = "Backend is OFFLINE";
+    });
+}
+
+setTimeout(checkHealth, 500);
+
+/* -------------------------------
+   UPLOAD
+-------------------------------- */
+function uploadPDF() {
+  const fileInput = document.getElementById("pdfInput");
+  const batchCode = document.getElementById("batchCode").value.trim();
+  const semester = document.getElementById("semester").value.trim();
+  const session = document.getElementById("session").value.trim();
+
+  if (!fileInput.files.length) {
+    alert("Please select a PDF file");
+    return;
+  }
+
+  if (!batchCode || !semester) {
+    alert("Please enter Batch Code and Semester");
+    return;
+  }
+
+  uploadBtn.disabled = true;
+  uploadBtn.innerText = "Uploading...";
+
+  const formData = new FormData();
+  formData.append("pdf", fileInput.files[0]);
+  formData.append("batch_code", batchCode);
+  formData.append("semester", semester);
+  formData.append("session", session);
+
+  fetch(`${BACKEND_URL}/upload`, {
+    method: "POST",
+    body: formData
+  })
+    .then(res => res.json())
+    .then(data => {
+      alert(data.message || "Upload successful");
+    })
+    .catch(() => {
+      alert("Upload failed");
+    })
+    .finally(() => {
+      uploadBtn.disabled = false;
+      uploadBtn.innerText = "Upload & Process";
+    });
+}
+</script>
+
+</body>
+</html>
